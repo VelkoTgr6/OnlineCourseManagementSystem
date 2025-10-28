@@ -1,6 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using OnlineCourseManagementSystem.Infrastructure.Data.Models;
-using System.Threading.Tasks;
 
 namespace OnlineCourseManagementSystem.Infrastructure.Data.Common
 {
@@ -36,13 +35,13 @@ namespace OnlineCourseManagementSystem.Infrastructure.Data.Common
         {
             if (entity is Student student)
             {
-                DbSet<Student>().Where(s => s.Id == student.Id)
+                DbSet<Student>().Where(s => s.Id == student.Id && !s.IsDeleted)
                 .Select(s => s.IsDeleted == true)
                 .FirstOrDefault();
             }
             else if (entity is Course course)
             {
-                DbSet<Course>().Where(c => c.Id == course.Id)
+                DbSet<Course>().Where(c => c.Id == course.Id && !c.IsDeleted)
                 .Select(c => c.IsDeleted == true)
                 .FirstOrDefault();
             }
