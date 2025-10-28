@@ -7,7 +7,7 @@ namespace OnlineCourseManagementSystem.Infrastructure.Data.Models
 {
     public class Enrollment
     {
-        [Required]
+        [Key]
         [Comment("Primary key for the Enrollment entity")]
         public int Id { get; set; }
 
