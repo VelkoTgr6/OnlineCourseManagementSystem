@@ -52,5 +52,41 @@ namespace OnlineCourseManagementSystem.Api.Controllers
 
             return CreatedAtAction(nameof(GetById), new { id = courseId }, model);
         }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateCourse([FromBody] UpdateCourseFormModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            try
+            {
+                var courseId = await courseService.UpdateAsync(model);
+                logger.LogInformation($"Updated course with ID {courseId}");
+                return Ok();
+            }
+            catch (KeyNotFoundException ex)
+            {
+                logger.LogWarning(ex.Message);
+                return NotFound();
+            }
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteCourse(int id)
+        {
+            try
+            {
+                await courseService.DeleteAsync(id);
+                logger.LogInformation($"Deleted course with ID {id}");
+                return NoContent();
+            }
+            catch (KeyNotFoundException ex)
+            {
+                logger.LogWarning(ex.Message);
+                return NotFound();
+            }
+        }
     }
 }

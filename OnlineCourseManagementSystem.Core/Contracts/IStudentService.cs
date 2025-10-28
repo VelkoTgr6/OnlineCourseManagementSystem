@@ -11,5 +11,6 @@ namespace OnlineCourseManagementSystem.Core.Contracts
         Task<int> UpdateAsync(UpdateStudentFormModel student);
         Task DeleteAsync(int id);
         Task<bool> ExistsAsync(int id);
+        Task<int> CreateAsync(CreateStudentFormModel model);
     }
 }

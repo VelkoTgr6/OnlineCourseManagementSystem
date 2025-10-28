@@ -27,6 +27,22 @@ namespace OnlineCourseManagementSystem.Core.Services
             await repository.SaveChangesAsync();
         }
 
+        public async Task<int> CreateAsync(CreateStudentFormModel model)
+        {
+            var student = new Student
+            {
+                FirstName = model.FirstName,
+                LastName = model.LastName
+            };
+
+            await repository.AddAsync(student);
+            await repository.SaveChangesAsync();
+
+            logger.LogInformation($"Created student with Id: {student.Id}");
+
+            return student.Id;
+        }
+
         public async Task DeleteAsync(int id)
         {
             var student = await repository.GetByIdAsync<Student>(id);
@@ -102,7 +118,7 @@ namespace OnlineCourseManagementSystem.Core.Services
 
             student.EnrolledCourses.Clear();
 
-            var existingCourses = await repository.All<Course>()
+            var existingCourses = await repository.All<Enrollment>()
                 .Where(c => model.Courses.Select(x => x.Id).Contains(c.Id))
                 .ToListAsync();
 
