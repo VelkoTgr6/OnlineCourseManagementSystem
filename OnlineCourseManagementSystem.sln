@@ -6,6 +6,9 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OnlineCourseManagementSystem.Api", "OnlineCourseManagementSystem.Api\OnlineCourseManagementSystem.Api.csproj", "{C7E76EAB-5F3E-48DA-BCB2-18AEACE8E319}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OnlineCourseManagementSystem.Core", "OnlineCourseManagementSystem.Core\OnlineCourseManagementSystem.Core.csproj", "{FED7687D-288B-43CE-A4F5-AF98F51FCBFC}"
+	ProjectSection(ProjectDependencies) = postProject
+		{54AF66B0-D8F5-48BC-BD3C-816E18D24CFD} = {54AF66B0-D8F5-48BC-BD3C-816E18D24CFD}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OnlineCourseManagementSystem.Infrastructure", "OnlineCourseManagementSystem.Infrastructure\OnlineCourseManagementSystem.Infrastructure.csproj", "{54AF66B0-D8F5-48BC-BD3C-816E18D24CFD}"
 EndProject
