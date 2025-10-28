@@ -8,12 +8,13 @@ namespace OnlineCourseManagementSystem.Api.Controllers
     [ApiController]
     public class CourseController : ControllerBase
     {
-        private readonly ILogger<CourseController> logger;
         private readonly ICourseService courseService;
+        private readonly ILogger<CourseController> logger;
 
-        public CourseController(ICourseService _courseService)
+        public CourseController(ICourseService _courseService, ILogger<CourseController> _logger)
         {
             courseService = _courseService;
+            logger = _logger;
         }
 
         [HttpGet]
@@ -21,9 +22,20 @@ namespace OnlineCourseManagementSystem.Api.Controllers
         {
             var courses = await courseService.GetAllAsync();
 
-            logger.LogInformation("Retrieved all courses. Count: {Count}", courses.Count());
+            logger.LogInformation($"Retrieved {courses.Count()} courses");
 
             return Ok(courses);
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(int id)
+        {
+            var course = await courseService.GetByIdAsync(id);
+            if (course == null)
+            {
+                return NotFound();
+            }
+            return Ok(course);
         }
 
         [HttpPost]
@@ -34,9 +46,11 @@ namespace OnlineCourseManagementSystem.Api.Controllers
                 return BadRequest(ModelState);
             }
 
-            await courseService.CreateAsync(model);
-            return Ok();
-                
+            var courseId = await courseService.CreateAsync(model);
+
+            logger.LogInformation($"Created new course with ID {courseId}");
+
+            return CreatedAtAction(nameof(GetById), new { id = courseId }, model);
         }
     }
 }

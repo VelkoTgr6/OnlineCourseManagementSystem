@@ -1,30 +1,37 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using OnlineCourseManagementSystem.Core.Contracts;
 using OnlineCourseManagementSystem.Core.Models.Course;
 using OnlineCourseManagementSystem.Infrastructure.Data.Common;
 using OnlineCourseManagementSystem.Infrastructure.Data.Models;
-using System.Linq.Expressions;
 
 namespace OnlineCourseManagementSystem.Core.Services
 {
     public class CourseService : ICourseService
     {
         private readonly IRepository repository;
+        private readonly ILogger<CourseService> logger;
 
-        public CourseService(IRepository _repository)
+        public CourseService(IRepository _repository,ILogger<CourseService> _logger)
         {
             repository = _repository;
+            logger = _logger;
         }
 
-        public async Task AddAsync(Course course)
+        public async Task AddAsync(Course courseEntity)
         {
-            await repository.AddAsync(course);
+            await repository.AddAsync(courseEntity);
+
+            logger.LogInformation($"Added new course with Title: {courseEntity.Title}");
+
             await repository.SaveChangesAsync();
         }
 
         public async Task<IEnumerable<CourseViewModel>> GetAllAsync()
         {
             return await repository.All<Course>()
+                .Where(c => !c.IsDeleted)
+                .Include(c => c.EnrolledStudents)
                 .Select(c => new CourseViewModel
                 {
                     Id = c.Id,
@@ -40,11 +47,15 @@ namespace OnlineCourseManagementSystem.Core.Services
         public async Task DeleteAsync(int id)
         {
             var course = await repository.GetByIdAsync<Course>(id);
-            if (course != null)
+
+            if (course == null || course.IsDeleted)
             {
-                repository.Delete(course);
-                await repository.SaveChangesAsync();
+                logger.LogWarning($"Attempted to delete missing/deleted course with ID: {id}");
+                throw new KeyNotFoundException($"Course with id {id} not found or deleted.");
             }
+
+            course.IsDeleted = true;
+            await repository.SaveChangesAsync();
         }
 
         public Task<bool> ExistsAsync(int id)
@@ -57,7 +68,9 @@ namespace OnlineCourseManagementSystem.Core.Services
 
         public async Task<CourseViewModel?> GetByIdAsync(int id)
         {
-            var course = await repository.GetByIdAsync<Course>(id);
+            var course = await repository.All<Course>()
+                .Include(c => c.EnrolledStudents)
+                .FirstOrDefaultAsync(c => c.Id == id && !c.IsDeleted);
 
             if (course != null)
             {
@@ -73,36 +86,59 @@ namespace OnlineCourseManagementSystem.Core.Services
 
                 return dto;
             }
-            throw new ArgumentNullException(nameof(id));
+            throw new KeyNotFoundException($"Course with id {id} not found.");
         }
 
-        public async Task UpdateAsync(Course course)
+        public async Task<int> UpdateAsync(UpdateCourseFormModel courseEntity)
         {
-            var courseEntity = await repository.GetByIdAsync<Course>(course.Id);
+            var course = await repository.GetByIdAsync<Course>(courseEntity.Id);
 
-            if (courseEntity != null)
+            if (course == null || course.IsDeleted)
             {
-                courseEntity.Title = course.Title;
-                courseEntity.StartDate = course.StartDate;
-                courseEntity.EndDate = course.EndDate;
-                courseEntity.EnrollmentCap = course.EnrollmentCap;
-                await repository.SaveChangesAsync();
+                logger.LogWarning($"Attempted to update missing/deleted course with ID: {courseEntity.Id}");
+                throw new KeyNotFoundException($"Course with id {courseEntity.Id} not found.");
             }
+
+            ValidateCourseDates(courseEntity.StartDate, courseEntity.EndDate);
+
+            course.Title = courseEntity.Title;
+            course.StartDate = courseEntity.StartDate;
+            course.EndDate = courseEntity.EndDate;
+            course.EnrollmentCap = courseEntity.EnrollmentCap;
+
+            await repository.SaveChangesAsync();
+
+            logger.LogInformation($"Updated course with Id: {course.Id}");
+
+            return courseEntity.Id;
         }
 
-        public async Task CreateAsync(CreateCourseFormModel courseDto)
+        public async Task<int> CreateAsync(CreateCourseFormModel courseEntity)
         {
+            ValidateCourseDates(courseEntity.StartDate,courseEntity.EndDate);
+
             var course = new Course()
             {
-                Title = courseDto.Title,
-                StartDate = courseDto.StartDate,
-                EndDate = courseDto.EndDate,
-                EnrollmentCap= courseDto.EnrollmentCap,
+                Title = courseEntity.Title,
+                StartDate = courseEntity.StartDate,
+                EndDate = courseEntity.EndDate,
+                EnrollmentCap= courseEntity.EnrollmentCap,
             };
+
+            
 
             await repository.AddAsync(course);
             await repository.SaveChangesAsync();
 
+            logger.LogInformation($"Created course with Id: {course.Id}");
+
+            return course.Id;
+        }
+
+        private void ValidateCourseDates(DateTime start, DateTime end)
+        {
+            if (end <= start)
+                throw new InvalidOperationException("EndDate must be after StartDate.");
         }
     }
 }

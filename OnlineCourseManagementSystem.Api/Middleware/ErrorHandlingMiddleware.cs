@@ -13,7 +13,7 @@ namespace OnlineCourseManagementSystem.Api.Middleware
             logger = _logger;
         }
 
-        public async Task Handle(HttpContext context) 
+        public async Task Invoke(HttpContext context) 
         {
             try
             {
@@ -22,12 +22,24 @@ namespace OnlineCourseManagementSystem.Api.Middleware
             catch (Exception ex)
             {
                 logger.LogError(ex, "An unhandled exception occurred while processing the request.");
-                context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+
                 context.Response.ContentType = "application/json";
+
+                var statusCode = ex switch
+                {
+                    KeyNotFoundException => (int)HttpStatusCode.NotFound,
+                    ArgumentException => (int)HttpStatusCode.BadRequest,
+                    InvalidOperationException => (int)HttpStatusCode.BadRequest,
+                    _ => (int)HttpStatusCode.InternalServerError
+                };
+
+                context.Response.StatusCode = statusCode;
 
                 var errorResponse = new
                 {
-                    Message = "An unexpected error occurred. Please try again later."
+                    Message = ex.Message,
+                    StatusCode = statusCode,
+                    ErrorType = ex.GetType().Name
                 };
 
                 var errorJson = System.Text.Json.JsonSerializer.Serialize(errorResponse);

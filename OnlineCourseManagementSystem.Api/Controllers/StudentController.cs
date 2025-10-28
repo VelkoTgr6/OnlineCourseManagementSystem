@@ -7,12 +7,13 @@ namespace OnlineCourseManagementSystem.Api.Controllers
     [ApiController]
     public class StudentController : ControllerBase
     {
-        private readonly ILogger<CourseController> logger;
+        private readonly ILogger<StudentController> logger;
         private readonly IStudentService studentService;
 
-        public StudentController(IStudentService _studentService)
+        public StudentController(IStudentService _studentService, ILogger<StudentController> _logger)
         {
             studentService = _studentService;
+            this.logger = _logger;
         }
 
         [HttpGet]
@@ -20,7 +21,7 @@ namespace OnlineCourseManagementSystem.Api.Controllers
         {
             var students = await studentService.GetAllAsync();
 
-            logger.LogInformation("Retrieved all students. Count: {Count}", students.Count());
+            logger.LogInformation($"Retrieved all students. Count: {students.Count()}");
 
             return Ok(students);
         }
