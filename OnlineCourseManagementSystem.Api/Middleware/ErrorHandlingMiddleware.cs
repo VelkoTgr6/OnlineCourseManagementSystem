@@ -35,7 +35,7 @@ namespace OnlineCourseManagementSystem.Api.Middleware
 
                 context.Response.StatusCode = statusCode;
 
-                var errorResponse = new
+                var errorResponse = new ErrorResponse
                 {
                     Message = ex.Message,
                     StatusCode = statusCode,
