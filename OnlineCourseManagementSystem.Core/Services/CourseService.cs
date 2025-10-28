@@ -1,7 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using OnlineCourseManagementSystem.Core.Contracts;
+using OnlineCourseManagementSystem.Core.Models.Course;
 using OnlineCourseManagementSystem.Infrastructure.Data.Common;
 using OnlineCourseManagementSystem.Infrastructure.Data.Models;
+using System.Linq.Expressions;
 
 namespace OnlineCourseManagementSystem.Core.Services
 {
@@ -20,10 +22,18 @@ namespace OnlineCourseManagementSystem.Core.Services
             await repository.SaveChangesAsync();
         }
 
-        public async Task<IEnumerable<Course>> GetAllAsync()
+        public async Task<IEnumerable<CourseViewModel>> GetAllAsync()
         {
             return await repository.All<Course>()
-                .Where(c => !c.IsDeleted)
+                .Select(c => new CourseViewModel
+                {
+                    Id = c.Id,
+                    Title = c.Title,
+                    StartDate = c.StartDate,
+                    EndDate = c.EndDate,
+                    EnrollmentCap = c.EnrollmentCap,
+                    EnrolledCount = c.EnrolledStudents.Count
+                })
                 .ToListAsync();
         }
 
@@ -45,10 +55,25 @@ namespace OnlineCourseManagementSystem.Core.Services
             return exists;
         }
 
-        public async Task<Course?> GetByIdAsync(int id)
+        public async Task<CourseViewModel?> GetByIdAsync(int id)
         {
             var course = await repository.GetByIdAsync<Course>(id);
-            return course;
+
+            if (course != null)
+            {
+                var dto = new CourseViewModel
+                {
+                    Id = course.Id,
+                    Title = course.Title,
+                    StartDate = course.StartDate,
+                    EndDate = course.EndDate,
+                    EnrollmentCap = course.EnrollmentCap,
+                    EnrolledCount = course.EnrolledStudents.Count
+                };
+
+                return dto;
+            }
+            throw new ArgumentNullException(nameof(id));
         }
 
         public async Task UpdateAsync(Course course)
@@ -63,6 +88,21 @@ namespace OnlineCourseManagementSystem.Core.Services
                 courseEntity.EnrollmentCap = course.EnrollmentCap;
                 await repository.SaveChangesAsync();
             }
+        }
+
+        public async Task CreateAsync(CreateCourseFormModel courseDto)
+        {
+            var course = new Course()
+            {
+                Title = courseDto.Title,
+                StartDate = courseDto.StartDate,
+                EndDate = courseDto.EndDate,
+                EnrollmentCap= courseDto.EnrollmentCap,
+            };
+
+            await repository.AddAsync(course);
+            await repository.SaveChangesAsync();
+
         }
     }
 }
