@@ -19,5 +19,11 @@
         /// </summary>
         public const int StudentNameMinLength = 2;
         public const int StudentNameMaxLength = 100;
+
+        /// <summary>
+        /// Enrollment progress constraints
+        /// </summary>
+        public const int EnrollmentProgressMin = 0;
+        public const int EnrollmentProgressMax = 100;
     }
 }

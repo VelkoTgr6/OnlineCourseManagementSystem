@@ -22,10 +22,10 @@ namespace OnlineCourseManagementSystem.Infrastructure.Data.Models
         public DateTime EndDate { get; set; }
 
         [Comment("Show if course is deleted")]
-        public bool IsDeleted { get; set; }
+        public bool IsDeleted { get; set; } = false;
 
         [Comment("Maximum number of students allowed")]
         public int EnrollmentCap { get; set; }
-        public ICollection<Student> EnrolledStudents { get; set; } = new HashSet<Student>();
+        public ICollection<Enrollment> EnrolledStudents { get; set; } = new HashSet<Enrollment>();
     }
 }

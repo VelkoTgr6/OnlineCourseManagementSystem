@@ -21,9 +21,9 @@ namespace OnlineCourseManagementSystem.Infrastructure.Data.Models
         public string LastName { get; set; } = string.Empty;
 
         [Comment("Show if student is deleted")]
-        public bool IsDeleted { get; set; }
+        public bool IsDeleted { get; set; } = false;
 
         [Comment("Enrolled Courses of a student")]
-        public ICollection<Course> EnrolledCourses { get; set; } = new HashSet<Course>();
+        public ICollection<Enrollment> EnrolledCourses { get; set; } = new HashSet<Enrollment>();
     }
 }
