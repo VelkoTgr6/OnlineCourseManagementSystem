@@ -1,10 +1,12 @@
-
+using Microsoft.EntityFrameworkCore;
 using OnlineCourseManagementSystem.Api.Middleware;
 using OnlineCourseManagementSystem.Core.Contracts;
 using OnlineCourseManagementSystem.Core.Services;
+using OnlineCourseManagementSystem.Infrastructure.Data;
 using OnlineCourseManagementSystem.Infrastructure.Data.Common;
 
-namespace OnlineCourseManagementSystem.Api
+
+namespace OnlineCourseManagementSystem.Infrastructure.Api
 {
     public class Program
     {
@@ -12,22 +14,24 @@ namespace OnlineCourseManagementSystem.Api
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
+            // DbContext
+            builder.Services.AddDbContext<CourseManagementDbContext>(options =>
+                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+            // repository and services
+            builder.Services.AddScoped<IRepository, Repository>();
+            builder.Services.AddScoped<ICourseService, CourseService>();
+            builder.Services.AddScoped<IStudentService, StudentService>();
+            builder.Services.AddScoped<IEnrollmentService, EnrollmentService>();
 
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
-            builder.Services.AddScoped<IRepository, Repository>();
-            builder.Services.AddScoped<ICourseService, CourseService>();
-            builder.Services.AddScoped<IStudentService, StudentService>();
-            //builder.Services.AddScoped<IEnrollmentService, EnrollmentService>();
-
 
             var app = builder.Build();
 
             app.UseMiddleware<ErrorHandlingMiddleware>();
 
-            // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
@@ -37,7 +41,6 @@ namespace OnlineCourseManagementSystem.Api
             app.UseHttpsRedirection();
 
             app.UseAuthorization();
-
 
             app.MapControllers();
 

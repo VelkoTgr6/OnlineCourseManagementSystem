@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using OnlineCourseManagementSystem.Infrastructure.Data.Models;
 
-namespace OnlineCourseManagementSystem.Infrastructure
+namespace OnlineCourseManagementSystem.Infrastructure.Data
 {
     public class CourseManagementDbContext : DbContext
     {
