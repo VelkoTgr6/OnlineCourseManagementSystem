@@ -4,6 +4,7 @@ using OnlineCourseManagementSystem.Core.Contracts;
 using OnlineCourseManagementSystem.Core.Models.Student;
 using OnlineCourseManagementSystem.Infrastructure.Data.Common;
 using OnlineCourseManagementSystem.Infrastructure.Data.Models;
+using OnlineCourseManagementSystem.Core.Factories;
 
 namespace OnlineCourseManagementSystem.Core.Services
 {
@@ -29,11 +30,7 @@ namespace OnlineCourseManagementSystem.Core.Services
 
         public async Task<int> CreateAsync(CreateStudentFormModel model)
         {
-            var student = new Student
-            {
-                FirstName = model.FirstName,
-                LastName = model.LastName
-            };
+            var student = StudentFactory.Create(model.FirstName, model.LastName);
 
             await repository.AddAsync(student);
             await repository.SaveChangesAsync();

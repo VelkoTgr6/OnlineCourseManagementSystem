@@ -4,6 +4,7 @@ using OnlineCourseManagementSystem.Core.Contracts;
 using OnlineCourseManagementSystem.Core.Models.Enroll;
 using OnlineCourseManagementSystem.Infrastructure.Data.Common;
 using OnlineCourseManagementSystem.Infrastructure.Data.Models;
+using OnlineCourseManagementSystem.Core.Factories;
 
 namespace OnlineCourseManagementSystem.Core.Services
 {
@@ -20,14 +21,7 @@ namespace OnlineCourseManagementSystem.Core.Services
 
         public async Task<int> CreateAsync(CreateEnrollmentFormModel model)
         {
-            var enrollment = new Enrollment
-            {
-                StudentId = model.StudentId,
-                CourseId = model.CourseId,
-                EnrollmentDate = DateTime.UtcNow,
-                Progress = 0,
-                IsCompleted = false
-            };
+            var enrollment = EnrollmentFactory.Create(model.StudentId,model.CourseId);
 
             await repository.AddAsync(enrollment);
             await repository.SaveChangesAsync();
