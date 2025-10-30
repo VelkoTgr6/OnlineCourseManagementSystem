@@ -93,7 +93,7 @@ namespace OnlineCourseManagementSystem.Core.Services
                 throw new InvalidOperationException($"Cannot add student after the start date of the course");
             }
 
-            if (student.EnrolledCourses.Any(c => c.Id == model.CourseId))
+            if (student.EnrolledCourses.Any(c => c.CourseId == model.CourseId))
             {
                 logger.LogWarning($"Student with ID {model.StudentId} is already enrolled in course ID {model.CourseId}");
                 throw new InvalidOperationException($"Student with id {model.StudentId} is already enrolled in course id {model.CourseId}.");
