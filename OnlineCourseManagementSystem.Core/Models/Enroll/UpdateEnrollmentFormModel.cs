@@ -5,9 +5,6 @@ namespace OnlineCourseManagementSystem.Core.Models.Enroll
     public class UpdateEnrollmentFormModel
     {
         [Required]
-        public int Id { get; set; }
-
-        [Required]
         public int StudentId { get; set; }
 
         [Required]

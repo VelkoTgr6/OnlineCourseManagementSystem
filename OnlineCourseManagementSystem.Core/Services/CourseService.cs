@@ -47,9 +47,9 @@ namespace OnlineCourseManagementSystem.Core.Services
 
         public async Task DeleteAsync(int id)
         {
-            var course = await repository.GetByIdAsync<Course>(id);
+            var course = await GetCourseById(id);
 
-            if (course == null || course.IsDeleted)
+            if (course == null)
             {
                 logger.LogWarning($"Attempted to delete missing/deleted course with ID: {id}");
                 throw new KeyNotFoundException($"Course with id {id} not found or deleted.");
@@ -59,17 +59,9 @@ namespace OnlineCourseManagementSystem.Core.Services
             await repository.SaveChangesAsync();
         }
 
-        public Task<bool> ExistsAsync(int id)
-        {
-            var exists = repository.AllAsReadOnly<Course>()
-                .AnyAsync(c => c.Id == id && !c.IsDeleted);
-
-            return exists;
-        }
-
         public async Task<CourseViewModel?> GetByIdAsync(int id)
         {
-            var course = await repository.All<Course>()
+            var course = await repository.AllAsReadOnly<Course>()
                 .Include(c => c.EnrolledStudents)
                 .FirstOrDefaultAsync(c => c.Id == id && !c.IsDeleted);
 
@@ -90,14 +82,14 @@ namespace OnlineCourseManagementSystem.Core.Services
             throw new KeyNotFoundException($"Course with id {id} not found.");
         }
 
-        public async Task<int> UpdateAsync(UpdateCourseFormModel model)
+        public async Task<int> UpdateAsync(int id,UpdateCourseFormModel model)
         {
-            var course = await repository.GetByIdAsync<Course>(model.Id);
+            var course = await GetCourseById(id);
 
-            if (course == null || course.IsDeleted)
+            if (course == null)
             {
-                logger.LogWarning($"Attempted to update missing/deleted course with ID: {model.Id}");
-                throw new KeyNotFoundException($"Course with id {model.Id} not found.");
+                logger.LogWarning($"Attempted to update missing/deleted course with ID: {id}");
+                throw new KeyNotFoundException($"Course with id {id} not found.");
             }
 
             ValidateCourseDates(model.StartDate, model.EndDate);
@@ -111,7 +103,7 @@ namespace OnlineCourseManagementSystem.Core.Services
 
             logger.LogInformation($"Updated course with Id: {course.Id}");
 
-            return model.Id;
+            return id;
         }
 
         public async Task<int> CreateAsync(CreateCourseFormModel model)
@@ -127,10 +119,46 @@ namespace OnlineCourseManagementSystem.Core.Services
             return course.Id;
         }
 
+        private Task<Course?> GetCourseById(int id)
+        {
+            var course = repository.All<Course>()
+                .FirstOrDefaultAsync(c => c.Id == id && !c.IsDeleted);
+
+            return course;
+        }
+
         private void ValidateCourseDates(DateTime start, DateTime end)
         {
             if (end <= start)
                 throw new InvalidOperationException("EndDate must be after StartDate.");
+        }
+
+        public async Task<IEnumerable<CourseStudentViewModel>> GerStudentsByCourseIdAsync(int courseId)
+        {
+            var course = await repository.All<Course>()
+                .Include(c => c.EnrolledStudents)
+                .FirstOrDefaultAsync(c => c.Id == courseId && !c.IsDeleted);
+
+            if (course == null)
+            {
+                logger.LogWarning($"Attempted to get students for missing/deleted course with ID: {courseId}");
+                throw new KeyNotFoundException($"Course with id {courseId} not found.");
+            }
+
+            var students = await repository.All<Course>()
+                .Where(c => c.Id == courseId && !c.IsDeleted)
+                    .SelectMany(c => c.EnrolledStudents
+                    .Where(e => !e.IsDeleted && !e.Student.IsDeleted)
+                    .Select(e => new CourseStudentViewModel
+                    {
+                        FirstName = e.Student.FirstName,
+                        LastName = e.Student.LastName
+                    }))
+                    .OrderBy(s => s.FirstName)
+                    .ThenBy(s => s.LastName)
+                    .ToListAsync();
+
+            return students;
         }
     }
 }

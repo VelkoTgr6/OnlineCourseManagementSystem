@@ -1,5 +1,4 @@
 ﻿using OnlineCourseManagementSystem.Core.Models.Student;
-using OnlineCourseManagementSystem.Infrastructure.Data.Models;
 
 namespace OnlineCourseManagementSystem.Core.Contracts
 {
@@ -7,10 +6,10 @@ namespace OnlineCourseManagementSystem.Core.Contracts
     {
         Task<IEnumerable<StudentViewModel>> GetAllAsync();
         Task<StudentViewModel?> GetByIdAsync(int id);
-        Task AddAsync(Student student);
-        Task<int> UpdateAsync(UpdateStudentFormModel student);
+        Task<int> UpdateAsync(int id,CreateStudentFormModel student);
+        Task<int> CourseEnrollmentUpdate(StudentCourseEnrollmentUpdateFormModel model);
+        Task<IEnumerable<StudentCoursesViewModel>> GetStudentCoursesAsync(int studentId);
         Task DeleteAsync(int id);
-        Task<bool> ExistsAsync(int id);
         Task<int> CreateAsync(CreateStudentFormModel model);
     }
 }

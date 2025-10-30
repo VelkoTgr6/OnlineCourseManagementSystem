@@ -21,7 +21,21 @@ namespace OnlineCourseManagementSystem.Core.Services
 
         public async Task<int> CreateAsync(CreateEnrollmentFormModel model)
         {
-            var enrollment = EnrollmentFactory.Create(model.StudentId,model.CourseId);
+            var student = await repository.AllAsReadOnly<Student>()
+                    .FirstOrDefaultAsync(s => s.Id == model.StudentId && !s.IsDeleted);
+
+            var course = await repository.AllAsReadOnly<Course>()
+                    .FirstOrDefaultAsync(c => c.Id == model.CourseId && !c.IsDeleted);
+
+            if (student == null || course == null)
+            {
+                logger.LogWarning($"Attempted to create enrollment with missing/deleted student or course. StudentId: {model.StudentId}, CourseId: {model.CourseId}");
+                throw new KeyNotFoundException("Student or Course not found or deleted.");
+            }
+            var enrollment = EnrollmentFactory.Create(student.Id,course.Id);
+
+            //student.EnrolledCourses.Add(enrollment);
+            //course.EnrolledStudents.Add(enrollment);
 
             await repository.AddAsync(enrollment);
             await repository.SaveChangesAsync();
@@ -61,11 +75,22 @@ namespace OnlineCourseManagementSystem.Core.Services
             }
 
             var course = await repository.All<Course>()
-                .FirstOrDefaultAsync(c => c.Id == model.CourseId);
+                .Include(c => c.EnrolledStudents)
+                .FirstOrDefaultAsync(c => c.Id == model.CourseId && !c.IsDeleted);
 
-            if (course == null || course.IsDeleted)
+            if (course == null)
             {
                 throw new KeyNotFoundException($"Course with id {model.CourseId} not found or deleted.");
+            }
+
+            if (course.EnrolledStudents.Count + 1 > course.EnrollmentCap)
+            {
+                throw new InvalidOperationException($"Cannot add student with Id {student.Id} becouse course is full");
+            }
+
+            if (model.EnrollmentDate > course.StartDate)
+            {
+                throw new InvalidOperationException($"Cannot add student after the start date of the course");
             }
 
             if (student.EnrolledCourses.Any(c => c.Id == model.CourseId))
@@ -74,16 +99,11 @@ namespace OnlineCourseManagementSystem.Core.Services
                 throw new InvalidOperationException($"Student with id {model.StudentId} is already enrolled in course id {model.CourseId}.");
             }
 
-            var enrollment = new Enrollment
-            {
-                StudentId = model.StudentId,
-                CourseId = model.CourseId,
-                EnrollmentDate = DateTime.UtcNow,
-                Progress = 0,
-                IsCompleted = false
-            };
+            var enrollment = EnrollmentFactory.Create(student.Id, course.Id);
 
             student.EnrolledCourses.Add(enrollment);
+            course.EnrolledStudents.Add(enrollment);
+
             await repository.SaveChangesAsync();
 
             logger.LogInformation($"Enrolled student ID {model.StudentId} in course ID {model.CourseId}");
@@ -153,15 +173,15 @@ namespace OnlineCourseManagementSystem.Core.Services
             logger.LogInformation($"Updated progress for enrollment ID {enrollmentId} to {progress}%");
         }
 
-        public async Task<int> UpdateEnrollmentAsync(UpdateEnrollmentFormModel model)
+        public async Task<int> UpdateEnrollmentAsync(int id,UpdateEnrollmentFormModel model)
         {
             var enrollment = repository.All<Enrollment>()
-                .FirstOrDefault(e => e.Id == model.Id && !e.IsDeleted);
+                .FirstOrDefault(e => e.Id == id && !e.IsDeleted);
 
             if (enrollment == null)
             {
-                logger.LogWarning($"Attempted to update missing/deleted enrollment with ID: {model.Id}");
-                throw new KeyNotFoundException($"Enrollment with id {model.Id} not found or deleted.");
+                logger.LogWarning($"Attempted to update missing/deleted enrollment with ID: {id}");
+                throw new KeyNotFoundException($"Enrollment with id {id} not found or deleted.");
             }
 
             enrollment.StudentId = model.StudentId;
@@ -171,7 +191,7 @@ namespace OnlineCourseManagementSystem.Core.Services
 
             await repository.SaveChangesAsync();
 
-            logger.LogInformation($"Updated enrollment with ID: {model.Id}");
+            logger.LogInformation($"Updated enrollment with ID: {id}");
 
             return enrollment.Id;
         }

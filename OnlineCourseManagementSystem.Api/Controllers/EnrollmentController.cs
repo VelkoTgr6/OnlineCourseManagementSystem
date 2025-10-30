@@ -27,7 +27,7 @@ namespace OnlineCourseManagementSystem.Api.Controllers
             return Ok(enrolls);
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id)
         {
             var enrollment = await enrollmentService.GetByIdAsync(id);
@@ -40,41 +40,35 @@ namespace OnlineCourseManagementSystem.Api.Controllers
         }
 
         [HttpPost] 
-        public async Task<IActionResult> CreateEnrollment([FromBody] CreateEnrollmentFormModel model)
+        public async Task<IActionResult> CreateEnrollment([FromBody] EnrollStudentFormModel model)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            var enrollmentId = await enrollmentService.CreateAsync(model);
+            var enrollmentId = await enrollmentService.EnrollStudentAsync(model);
 
-            logger.LogInformation($"Created new course with ID {enrollmentId}");
+            logger.LogInformation($"Created new enrollment with ID {enrollmentId}");
 
             return CreatedAtAction(nameof(GetById), new { id = enrollmentId }, model);
         }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateEnrollement([FromBody] UpdateEnrollmentFormModel model)
+        [HttpPut("{id:int}")]
+        public async Task<IActionResult> UpdateEnrollement([FromRoute] int id,[FromBody] UpdateEnrollmentFormModel model)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
-            try
-            {
-                var enrollmentId = await enrollmentService.UpdateEnrollmentAsync(model);
-                logger.LogInformation($"Updated course with ID {enrollmentId}");
-                return Ok();
-            }
-            catch (KeyNotFoundException ex)
-            {
-                logger.LogWarning(ex.Message);
-                return NotFound();
-            }
+
+            var enrollmentId = await enrollmentService.UpdateEnrollmentAsync(id,model);
+            logger.LogInformation($"Updated enrollment with ID {enrollmentId}");
+                
+            return Ok(new { Message = "Enrollment updated succesfully", Id = enrollmentId});
         }
 
-        [HttpPut("{id}/progress")]
+        [HttpPut("{id:int}/progress")]
         public async Task<IActionResult> UpdateProgress(int id, [FromBody] int progress)
         {
             try
@@ -95,20 +89,12 @@ namespace OnlineCourseManagementSystem.Api.Controllers
         }
 
 
-        [HttpDelete("{id}")]
+        [HttpDelete("{id:int}")]
         public async Task<IActionResult> DeleteEnrollment(int id)
         {
-            try
-            {
-                await enrollmentService.DeleteAsync(id);
-                logger.LogInformation($"Deleted course with ID {id}");
-                return NoContent();
-            }
-            catch (KeyNotFoundException ex)
-            {
-                logger.LogWarning(ex.Message);
-                return NotFound();
-            }
+            await enrollmentService.DeleteAsync(id);
+            logger.LogInformation($"Deleted enrollment with ID {id}");
+            return NoContent();
         }
     }
 }

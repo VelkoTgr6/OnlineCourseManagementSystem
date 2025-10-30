@@ -5,8 +5,6 @@ namespace OnlineCourseManagementSystem.Core.Models.Course
 {
     public class UpdateCourseFormModel
     {
-        public int Id { get; set; }
-
         [Required]
         [MaxLength(CourseTitleMaxLength)]
         public string Title { get; set; } = string.Empty;

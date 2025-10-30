@@ -8,7 +8,7 @@ namespace OnlineCourseManagementSystem.Core.Contracts
         Task<int> EnrollStudentAsync(EnrollStudentFormModel model);
         Task UpdateProgressAsync(int enrollmentId, int progress);
         Task DeleteAsync(int enrollmentId);
-        Task<int> UpdateEnrollmentAsync(UpdateEnrollmentFormModel model);
+        Task<int> UpdateEnrollmentAsync(int id,UpdateEnrollmentFormModel model);
         Task<IEnumerable<EnrollViewModel>> GetAllAsync();
         Task<EnrollViewModel?> GetByIdAsync(int enrollmentId);
     }

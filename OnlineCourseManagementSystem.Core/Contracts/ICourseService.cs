@@ -8,9 +8,9 @@ namespace OnlineCourseManagementSystem.Core.Contracts
         Task<IEnumerable<CourseViewModel>> GetAllAsync();
         Task<CourseViewModel?> GetByIdAsync(int id);
         Task<int> CreateAsync(CreateCourseFormModel courseDto);
+        Task<IEnumerable<CourseStudentViewModel>> GerStudentsByCourseIdAsync(int courseId);
         Task AddAsync(Course course);
-        Task<int> UpdateAsync(UpdateCourseFormModel course);
+        Task<int> UpdateAsync(int id,UpdateCourseFormModel course);
         Task DeleteAsync(int id);
-        Task<bool> ExistsAsync(int id);
     }
 }

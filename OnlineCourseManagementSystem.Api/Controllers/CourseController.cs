@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using OnlineCourseManagementSystem.Core.Contracts;
 using OnlineCourseManagementSystem.Core.Models.Course;
+using OnlineCourseManagementSystem.Infrastructure.Data.Models;
 
 namespace OnlineCourseManagementSystem.Api.Controllers
 {
@@ -27,7 +28,7 @@ namespace OnlineCourseManagementSystem.Api.Controllers
             return Ok(courses);
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id)
         {
             var course = await courseService.GetByIdAsync(id);
@@ -37,6 +38,17 @@ namespace OnlineCourseManagementSystem.Api.Controllers
             }
             return Ok(course);
         }
+
+        [HttpGet("{courseId:int}/students")]
+        public async Task<IActionResult> GetStudentsByCourseId([FromRoute]int courseId)
+        {
+            var course = await courseService.GerStudentsByCourseIdAsync(courseId);
+            if (course == null)
+            {
+                return NotFound();
+            }
+            return Ok(course);
+        }   
 
         [HttpPost]
         public async Task<IActionResult> CreateCourse([FromBody] CreateCourseFormModel model)
@@ -53,40 +65,29 @@ namespace OnlineCourseManagementSystem.Api.Controllers
             return CreatedAtAction(nameof(GetById), new { id = courseId }, model);
         }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateCourse([FromBody] UpdateCourseFormModel model)
+        [HttpPut("{id:int}")]
+        public async Task<IActionResult> UpdateCourse([FromRoute]int id,[FromBody] UpdateCourseFormModel model)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
-            try
-            {
-                var courseId = await courseService.UpdateAsync(model);
-                logger.LogInformation($"Updated course with ID {courseId}");
-                return Ok();
-            }
-            catch (KeyNotFoundException ex)
-            {
-                logger.LogWarning(ex.Message);
-                return NotFound();
-            }
+
+            var courseId = await courseService.UpdateAsync(id,model);
+            
+            logger.LogInformation($"Updated course with ID {courseId}");
+
+            return Ok(new { Message = "Course updated successfully", Id = courseId });
         }
 
-        [HttpDelete("{id}")]
+        [HttpDelete("{id:int}")]
         public async Task<IActionResult> DeleteCourse(int id)
         {
-            try
-            {
-                await courseService.DeleteAsync(id);
-                logger.LogInformation($"Deleted course with ID {id}");
-                return NoContent();
-            }
-            catch (KeyNotFoundException ex)
-            {
-                logger.LogWarning(ex.Message);
-                return NotFound();
-            }
+            await courseService.DeleteAsync(id);
+
+            logger.LogInformation($"Deleted course with ID {id}");
+
+            return NoContent();
         }
     }
 }
