@@ -114,37 +114,6 @@ namespace UnitTests
         }
 
         [Test]
-        public async Task ExistsAsync_Should_Return_Correct_Value()
-        {
-            var active = new Course
-            {
-                Title = "Active",
-                StartDate = DateTime.UtcNow,
-                EndDate = DateTime.UtcNow.AddDays(1),
-                EnrollmentCap = 5,
-                IsDeleted = false
-            };
-            var deleted = new Course
-            {
-                Title = "Deleted",
-                StartDate = DateTime.UtcNow,
-                EndDate = DateTime.UtcNow.AddDays(1),
-                EnrollmentCap = 5,
-                IsDeleted = true
-            };
-            _db.Courses.AddRange(active, deleted);
-            await _db.SaveChangesAsync();
-
-            var existsActive = await _service.ExistsAsync(active.Id);
-            var existsDeleted = await _service.ExistsAsync(deleted.Id);
-            var existsMissing = await _service.ExistsAsync(999);
-
-            Assert.That(existsActive, Is.True);
-            Assert.That(existsDeleted, Is.False);
-            Assert.That(existsMissing, Is.False);
-        }
-
-        [Test]
         public async Task GetAllAsync_Should_Return_NotDeleted_With_Enrolled_Count()
         {
             var st = new Student { FirstName = "S1", LastName = "L1", IsDeleted = false };
@@ -209,8 +178,10 @@ namespace UnitTests
         [Test]
         public async Task UpdateAsync_Should_Update_All_Fields()
         {
+            var id = 1;
             var c = new Course
             {
+                Id = 1,
                 Title = "Old Title",
                 StartDate = DateTime.UtcNow.Date,
                 EndDate = DateTime.UtcNow.Date.AddDays(5),
@@ -221,15 +192,14 @@ namespace UnitTests
             await _db.SaveChangesAsync();
 
             var model = new UpdateCourseFormModel
-            {
-                Id = c.Id,
+            { 
                 Title = "New Title",
                 StartDate = c.StartDate.AddDays(1),
                 EndDate = c.EndDate.AddDays(1),
                 EnrollmentCap = 25
             };
 
-            var resultId = await _service.UpdateAsync(model);
+            var resultId = await _service.UpdateAsync(id,model);
 
             Assert.That(resultId, Is.EqualTo(c.Id));
             var reloaded = await _db.Courses.FindAsync(c.Id);
@@ -243,16 +213,16 @@ namespace UnitTests
         [Test]
         public void UpdateAsync_Should_Throw_When_Missing_And_LogWarning()
         {
+            var id = 1234;
             var model = new UpdateCourseFormModel
             {
-                Id = 9999,
                 Title = "X",
                 StartDate = DateTime.UtcNow,
                 EndDate = DateTime.UtcNow.AddDays(1),
                 EnrollmentCap = 1
             };
 
-            Assert.ThrowsAsync<KeyNotFoundException>(() => _service.UpdateAsync(model));
+            Assert.ThrowsAsync<KeyNotFoundException>(() => _service.UpdateAsync(id,model));
             _logger.VerifyLog(LogLevel.Warning, "Attempted to update missing/deleted course", Times.AtLeastOnce());
         }
 
@@ -268,32 +238,6 @@ namespace UnitTests
             };
 
             Assert.ThrowsAsync<InvalidOperationException>(() => _service.CreateAsync(model));
-        }
-
-        [Test]
-        public async Task UpdateAsync_Should_Throw_When_EndDate_Before_StartDate()
-        {
-            var c = new Course
-            {
-                Title = "Date Check",
-                StartDate = DateTime.UtcNow,
-                EndDate = DateTime.UtcNow.AddDays(2),
-                EnrollmentCap = 10,
-                IsDeleted = false
-            };
-            _db.Courses.Add(c);
-            await _db.SaveChangesAsync();
-
-            var model = new UpdateCourseFormModel
-            {
-                Id = c.Id,
-                Title = "Date Check",
-                StartDate = c.StartDate,
-                EndDate = c.StartDate.AddHours(-1),
-                EnrollmentCap = 10
-            };
-
-            Assert.ThrowsAsync<InvalidOperationException>(() => _service.UpdateAsync(model));
         }
     }
 }

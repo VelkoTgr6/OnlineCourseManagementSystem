@@ -1,12 +1,15 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
-using OnlineCourseManagementSystem.Core.Models.Course;
 using OnlineCourseManagementSystem.Core.Models.Student;
 using OnlineCourseManagementSystem.Core.Services;
 using OnlineCourseManagementSystem.Infrastructure.Data.Models;
 using UnitTests.Infrastructure;
+using Microsoft.Extensions.Logging;
 using Assert = NUnit.Framework.Assert;
 
 namespace UnitTests
@@ -20,12 +23,10 @@ namespace UnitTests
         private StudentService _service = null!;
 
         private static DbContextOptions<TestDbContext> CreateOptions()
-        {
-            return new DbContextOptionsBuilder<TestDbContext>()
-                       .UseInMemoryDatabase($"StudentsDb_{Guid.NewGuid()}")
-                       .EnableSensitiveDataLogging()
-                       .Options;
-        }
+            => new DbContextOptionsBuilder<TestDbContext>()
+               .UseInMemoryDatabase($"StudentsDb_{Guid.NewGuid()}")
+               .EnableSensitiveDataLogging()
+               .Options;
 
         [SetUp]
         public void SetUp()
@@ -37,18 +38,6 @@ namespace UnitTests
         }
 
         [Test]
-        public async Task AddAsync_Should_Add_Student_And_Save()
-        {
-            var student = new Student { FirstName = "Ada", LastName = "Lovelace" };
-
-            await _service.AddAsync(student);
-
-            var fromDb = await _db.Students.FirstOrDefaultAsync(s => s.FirstName == "Ada" && s.LastName == "Lovelace");
-            Assert.That(fromDb != null);
-            _logger.VerifyLog(LogLevel.Information, "Added new student", Times.AtLeastOnce());
-        }
-
-        [Test]
         public async Task CreateAsync_Should_Return_Id_And_Persist()
         {
             var id = await _service.CreateAsync(new CreateStudentFormModel
@@ -57,9 +46,9 @@ namespace UnitTests
                 LastName = "Turing"
             });
 
-            Assert.That(id > 0);
+            Assert.That(id, Is.GreaterThan(0));
             var fromDb = await _db.Students.FindAsync(id);
-            Assert.That(fromDb != null);
+            Assert.That(fromDb, Is.Not.Null);
             Assert.That(fromDb!.FirstName, Is.EqualTo("Alan"));
             Assert.That(fromDb.LastName, Is.EqualTo("Turing"));
             _logger.VerifyLog(LogLevel.Information, "Created student with Id", Times.AtLeastOnce());
@@ -75,7 +64,8 @@ namespace UnitTests
             await _service.DeleteAsync(s.Id);
 
             var reloaded = await _db.Students.FindAsync(s.Id);
-            Assert.That(reloaded!.IsDeleted);
+            Assert.That(reloaded, Is.Not.Null);
+            Assert.That(reloaded!.IsDeleted, Is.True);
         }
 
         [Test]
@@ -86,33 +76,16 @@ namespace UnitTests
             var s = new Student { FirstName = "Linus", LastName = "Torvalds", IsDeleted = true };
             _db.Students.Add(s);
             _db.SaveChanges();
+
             Assert.ThrowsAsync<KeyNotFoundException>(() => _service.DeleteAsync(s.Id));
-
             _logger.VerifyLog(LogLevel.Warning, "Attempted to delete missing/deleted student", Times.AtLeastOnce());
-        }
-
-        [Test]
-        public async Task ExistsAsync_Should_Return_Correct_Value()
-        {
-            var active = new Student { FirstName = "Active", LastName = "User", IsDeleted = false };
-            var deleted = new Student { FirstName = "Deleted", LastName = "User", IsDeleted = true };
-            _db.Students.AddRange(active, deleted);
-            await _db.SaveChangesAsync();
-
-            var existsActive = await _service.ExistsAsync(active.Id);
-            var existsDeleted = await _service.ExistsAsync(deleted.Id);
-            var existsMissing = await _service.ExistsAsync(999);
-
-            Assert.That(existsActive, Is.True);
-            Assert.That(existsDeleted, Is.False);
-            Assert.That(existsMissing, Is.False);
         }
 
         [Test]
         public async Task GetAllAsync_Should_Return_NotDeleted_With_Enrollment_Count()
         {
-            var st1 = new Student { FirstName = "S1", LastName = "L1", IsDeleted = false };
-            var st2 = new Student { FirstName = "S2", LastName = "L2", IsDeleted = true };  // should be filtered out
+            var st1 = new Student { FirstName = "S1", LastName = "L1", IsDeleted = false, EnrolledCourses = new List<Enrollment>() };
+            var st2 = new Student { FirstName = "S2", LastName = "L2", IsDeleted = true };
             var course = new Course { Title = "C# 12", StartDate = DateTime.UtcNow, EndDate = DateTime.UtcNow.AddDays(1), EnrollmentCap = 50, IsDeleted = false };
             _db.AddRange(st1, st2, course);
             await _db.SaveChangesAsync();
@@ -132,12 +105,13 @@ namespace UnitTests
         [Test]
         public async Task GetByIdAsync_Should_Return_ViewModel()
         {
-            var st = new Student { FirstName = "Find", LastName = "Me" };
+            var st = new Student { FirstName = "Find", LastName = "Me", IsDeleted = false, EnrolledCourses = new List<Enrollment>() };
             _db.Students.Add(st);
             await _db.SaveChangesAsync();
 
             var vm = await _service.GetByIdAsync(st.Id);
 
+            Assert.That(vm, Is.Not.Null);
             Assert.That(vm!.Id, Is.EqualTo(st.Id));
             Assert.That(vm.FirstName, Is.EqualTo("Find"));
         }
@@ -156,18 +130,17 @@ namespace UnitTests
             _db.Students.Add(st);
             await _db.SaveChangesAsync();
 
-            var model = new UpdateStudentFormModel
+            var model = new CreateStudentFormModel
             {
-                Id = st.Id,
                 FirstName = "New",
                 LastName = "Name",
-                Courses = new List<CourseViewModel>() // keep it empty to avoid enrollment complexity
             };
 
-            var resultId = await _service.UpdateAsync(model);
+            var resultId = await _service.UpdateAsync(st.Id, model);
 
             Assert.That(resultId, Is.EqualTo(st.Id));
             var reloaded = await _db.Students.FindAsync(st.Id);
+            Assert.That(reloaded, Is.Not.Null);
             Assert.That(reloaded!.FirstName, Is.EqualTo("New"));
             Assert.That(reloaded.LastName, Is.EqualTo("Name"));
             _logger.VerifyLog(LogLevel.Information, "Updated student", Times.AtLeastOnce());
@@ -176,16 +149,142 @@ namespace UnitTests
         [Test]
         public void UpdateAsync_Should_Throw_When_Missing_And_LogWarning()
         {
-            var model = new UpdateStudentFormModel
+            var id = 9999;
+            var model = new CreateStudentFormModel
             {
-                Id = 9999,
                 FirstName = "X",
-                LastName = "Y",
-                Courses = new List<CourseViewModel>()
+                LastName = "Y"
             };
 
-            Assert.ThrowsAsync<KeyNotFoundException>(() => _service.UpdateAsync(model));
+            Assert.ThrowsAsync<KeyNotFoundException>(() => _service.UpdateAsync(id, model));
             _logger.VerifyLog(LogLevel.Warning, "Attempted to update missing/deleted student", Times.AtLeastOnce());
+        }
+
+        [Test]
+        public async Task CourseEnrollmentUpdate_Should_Update_Progress_And_Complete_At_100()
+        {
+            var student = new Student { FirstName = "Ada", LastName = "Lovelace", IsDeleted = false, EnrolledCourses = new List<Enrollment>() };
+            var course = new Course { Title = "Math", StartDate = DateTime.UtcNow, EndDate = DateTime.UtcNow.AddDays(3), EnrollmentCap = 10, IsDeleted = false };
+            _db.AddRange(student, course);
+            await _db.SaveChangesAsync();
+
+            var enrollment = new Enrollment
+            {
+                StudentId = student.Id,
+                CourseId = course.Id,
+                EnrollmentDate = DateTime.UtcNow,
+                Progress = 40,
+                IsCompleted = false,
+                IsDeleted = false
+            };
+            student.EnrolledCourses!.Add(enrollment);
+            _db.Enrollments.Add(enrollment);
+            await _db.SaveChangesAsync();
+
+            var id = await _service.CourseEnrollmentUpdate(new StudentCourseEnrollmentUpdateFormModel
+            {
+                StudentId = student.Id,
+                CourseId = course.Id,
+                ProgressPercentage = 100
+            });
+
+            Assert.That(id, Is.EqualTo(enrollment.Id));
+            var reloaded = await _db.Enrollments.FindAsync(enrollment.Id);
+            Assert.That(reloaded, Is.Not.Null);
+            Assert.That(reloaded!.Progress, Is.EqualTo(100));
+            Assert.That(reloaded.IsCompleted, Is.True);
+            _logger.VerifyLog(LogLevel.Information, "completed Course ID", Times.AtLeastOnce());
+        }
+
+        [Test]
+        public void CourseEnrollmentUpdate_Should_Throw_When_OutOfRange()
+        {
+            var student = new Student { FirstName = "S", LastName = "1", IsDeleted = false, EnrolledCourses = new List<Enrollment>() };
+            var course = new Course { Title = "C", StartDate = DateTime.UtcNow, EndDate = DateTime.UtcNow.AddDays(1), EnrollmentCap = 5, IsDeleted = false };
+            _db.AddRange(student, course);
+            _db.SaveChanges();
+
+            var enrollment = new Enrollment
+            {
+                StudentId = student.Id,
+                CourseId = course.Id,
+                EnrollmentDate = DateTime.UtcNow,
+                Progress = 0,
+                IsCompleted = false,
+                IsDeleted = false
+            };
+            student.EnrolledCourses!.Add(enrollment);
+            _db.Enrollments.Add(enrollment);
+            _db.SaveChanges();
+
+            Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => _service.CourseEnrollmentUpdate(new StudentCourseEnrollmentUpdateFormModel
+            {
+                StudentId = student.Id,
+                CourseId = course.Id,
+                ProgressPercentage = -1
+            }));
+
+            Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => _service.CourseEnrollmentUpdate(new StudentCourseEnrollmentUpdateFormModel
+            {
+                StudentId = student.Id,
+                CourseId = course.Id,
+                ProgressPercentage = 101
+            }));
+        }
+
+        [Test]
+        public void CourseEnrollmentUpdate_Should_Throw_When_Student_Not_Found()
+        {
+            Assert.ThrowsAsync<KeyNotFoundException>(() => _service.CourseEnrollmentUpdate(new StudentCourseEnrollmentUpdateFormModel
+            {
+                StudentId = 9999,
+                CourseId = 1,
+                ProgressPercentage = 50
+            }));
+        }
+
+        [Test]
+        public async Task CourseEnrollmentUpdate_Should_Throw_When_Enrollment_Not_Found()
+        {
+            var student = new Student { FirstName = "Only", LastName = "Student", IsDeleted = false, EnrolledCourses = new List<Enrollment>() };
+            _db.Students.Add(student);
+            await _db.SaveChangesAsync();
+
+            Assert.ThrowsAsync<KeyNotFoundException>(() => _service.CourseEnrollmentUpdate(new StudentCourseEnrollmentUpdateFormModel
+            {
+                StudentId = student.Id,
+                CourseId = 777,
+                ProgressPercentage = 50
+            }));
+        }
+
+        [Test]
+        public async Task GetStudentCoursesAsync_Should_Return_Courses()
+        {
+            var student = new Student { FirstName = "S", LastName = "C", IsDeleted = false, EnrolledCourses = new List<Enrollment>() };
+            var course = new Course { Title = "Title 1", StartDate = DateTime.UtcNow.Date, EndDate = DateTime.UtcNow.Date.AddDays(10), EnrollmentCap = 10, IsDeleted = false };
+            _db.AddRange(student, course);
+            await _db.SaveChangesAsync();
+
+            var enrollment = new Enrollment
+            {
+                StudentId = student.Id,
+                CourseId = course.Id,
+                EnrollmentDate = DateTime.UtcNow,
+                Progress = 0,
+                IsCompleted = false,
+                IsDeleted = false
+            };
+            student.EnrolledCourses!.Add(enrollment);
+            _db.Enrollments.Add(enrollment);
+            await _db.SaveChangesAsync();
+
+            var courses = (await _service.GetStudentCoursesAsync(student.Id)).ToList();
+
+            Assert.That(courses.Count, Is.EqualTo(1));
+            Assert.That(courses[0].CourseTitle, Is.EqualTo("Title 1"));
+            Assert.That(courses[0].StartDate, Is.EqualTo(course.StartDate));
+            Assert.That(courses[0].EndDate, Is.EqualTo(course.EndDate));
         }
     }
 
