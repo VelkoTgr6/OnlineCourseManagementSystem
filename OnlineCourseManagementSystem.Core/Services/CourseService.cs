@@ -57,8 +57,6 @@ namespace OnlineCourseManagementSystem.Core.Services
 
             course.IsDeleted = true;
             await repository.SaveChangesAsync();
-
-            return ResponseFactory.Success(id, $"Course with id {id} deleted successfully.");
         }
 
         public Task<bool> ExistsAsync(int id)
